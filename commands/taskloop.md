@@ -438,3 +438,58 @@ Auth: `Authorization: $LINEAR_API_KEY` (no `Bearer` prefix).
 | Get task detail | Same query scoped to one issue (`issue(id: "<task-id>") { title description comments { nodes { body } } }`) — treat `description` as the goal/acceptance-criteria text; if the description references a checklist, Linear renders markdown checkboxes inside `description` itself (`- [ ]`) — these can be read the same way as the `docs` adapter's checkboxes for judging what's satisfied, but are not individually flippable via this adapter; only the whole-issue state transition below is written back. |
 | Mark done | `curl -sS -H "Authorization: $LINEAR_API_KEY" -H "Content-Type: application/json" -X POST https://api.linear.app/graphql -d '{"query":"mutation { issueUpdate(id: \"<task-id>\", input: { stateId: \"<done-state-id>\" }) { success } }"}'` — resolve `<done-state-id>` once per run via `query { team(id: \"<resolved-team-id>\") { states { nodes { id name type } } } }`, reusing the same team id resolved once above in "List open tasks" (shared across all three operations in this adapter — do not re-resolve it per operation), picking the node with `type: \"completed\"`. One mutation per task, at the end of Step 4. |
 | Create task(s) | Reuses the same team id resolved once above via `query { team(key: \"$LINEAR_TEAM_KEY\") { id } }` and shared across all three operations in this adapter, then `curl -sS -H "Authorization: $LINEAR_API_KEY" -H "Content-Type: application/json" -X POST https://api.linear.app/graphql -d '{"query":"mutation { issueCreate(input: { teamId: \"<resolved-team-id>\", title: \"<title>\", description: \"<goal/context/acceptance-criteria as markdown>\" }) { issue { identifier } } }"}'` — one call per approved task; the response's `.data.issueCreate.issue.identifier` (e.g. `ENG-43`) is that task's `<task-id>`. |
+
+---
+
+## Appendix C — Default Task-Source Detection
+
+Used by `/taskloop` Step 0 item 2 and `/taskloop-plan` Step 1 whenever
+`source=` is **omitted** from `$ARGUMENTS`. An explicit `source=<x>`
+always wins outright — skip straight to "Persist the resolution" below,
+using the explicit value.
+
+Resolve `<source>` in this order, stopping at the first rule that applies:
+
+1. **Persisted choice.** Read `.taskloop/config.json` (repo root). If it
+   parses and has a `"source"` key, use that value — no question asked.
+   This is what keeps `/taskloop` safe to invoke repeatedly unattended.
+2. **Already-established `docs/planning/`.** If there's no persisted
+   choice yet, check, in order:
+   - `git ls-files docs/planning/ | head -1` prints a path (tracked), or
+   - `.gitignore` already has an entry matching `docs/planning/`
+     (a `docs/planning/`, `docs/planning`, or broader `docs/` line), or
+   - `docs/planning/` exists as a directory on disk.
+
+   If any is true: `<source> = docs`. No question asked.
+3. **First-run detection.** If neither 1 nor 2 applies, grep root-level
+   `README.md`, `AGENTS.md`, and `CLAUDE.md` — whichever exist —
+   case-insensitively for the literal names `Jira`, `Asana`,
+   `Monday\.com` (also match bare `Monday`), and `Linear`. Track which
+   file(s) each match came from.
+   - **Exactly one distinct tool matched** (even if it appears in more
+     than one file): ask a yes/no confirm naming the tool and one file it
+     was found in, e.g.: "This project's README.md mentions Linear — use
+     that instead of a local docs/planning/ tracker for this repo?"
+     - Yes: `<source>` = that tool.
+     - No: fall through to the open question below (a "no" only rules
+       out the guessed tool, not "no tool at all").
+   - **Zero matches, more than one distinct tool matched, or the confirm
+     above was declined:** ask an open question: "This repo doesn't have
+     a docs/planning/ tracker yet. Do you already use one of these for
+     task tracking on this project — Jira, Asana, Monday.com, or Linear?
+     Or should I use the local docs/planning/ file-based tracker?"
+     `<source>` = the user's answer (one of `jira`/`asana`/`monday`/
+     `linear`/`docs`).
+
+**Persist the resolution.** However `<source>` was resolved (explicit
+argument, step 1, step 2, or step 3), write it to `.taskloop/config.json`
+as `{"source": "<source>"}`, creating `.taskloop/` if it doesn't exist.
+Ensure `.taskloop/` is listed in `.gitignore` (append it if not — same
+handling `/taskloop`'s own blocked-memory step already does for this
+directory; do not add it twice if already present).
+
+**Validate non-docs sources.** If the resolved `<source>` is not `docs`,
+confirm its required env vars (Appendix B) are all set. If any are
+missing: stop (the loop, for `/taskloop`; task creation, for
+`/taskloop-plan`) and report exactly which variable is missing — same
+pattern as an explicit `source=` resolving to a non-`docs` adapter today.
