@@ -19,9 +19,11 @@ adapters:
   to that host's REST/GraphQL API directly (via `curl`) when the CLI isn't
   available. Full command sets for both modes are in **Appendix A**.
 - **Task source adapter** — where tasks come from and how "done" is
-  recorded. Defaults to this repo's `docs/planning/phase-*/sprint-*/task-*.md`
-  checkbox docs; can instead point at Jira, Asana, Monday.com, or Linear.
-  Full command sets for each are in **Appendix B**.
+  recorded. Falls back to this repo's
+  `docs/planning/phase-*/sprint-*/task-*.md` checkbox docs when no other
+  source is configured or detected; can instead point at Jira, Asana,
+  Monday.com, or Linear. Full command sets for each are in **Appendix B**;
+  how the fallback is resolved is in **Appendix C**.
 
 Steps 1 and 4 call into whichever task source adapter is selected; Steps 5
 and 7 call into whichever VCS adapter is selected. The control flow itself
@@ -42,10 +44,13 @@ Parse `"$ARGUMENTS"` before Step 0. All are optional and can combine, e.g.
   This is the only way a blocked task gets reconsidered — the loop never
   un-blocks a task on its own.
 - `source=<docs|jira|asana|monday|linear>` — which task source adapter to
-  use. Defaults to `docs` (this repo's `docs/planning/` tree) if omitted.
-  Non-`docs` sources also require the environment variables listed for
-  that adapter in Appendix B — if they're missing, this is a Step 0 stop
-  condition, not a per-task failure.
+  use. If omitted, resolved automatically per Appendix C (persisted
+  choice, then an already-established `docs/planning/` tree, then a
+  README/AGENTS.md/CLAUDE.md scan, asking only if none of those apply) —
+  falls back to `docs` (this repo's `docs/planning/` tree) if nothing else
+  resolves it. Non-`docs` sources also require the environment variables
+  listed for that adapter in Appendix B — if they're missing, this is a
+  Step 0 stop condition, not a per-task failure.
 
 ## Persistent Blocked-Task Memory
 
@@ -111,10 +116,14 @@ re-detect per task.
    token is available, or the host doesn't match any known provider: **stop
    the loop** before Step 1 and report the remote URL / missing
    credential to the user — ask how to proceed rather than guessing.
-2. **Task source adapter.** Read `source=` from `$ARGUMENTS` (default
-   `docs`). For a non-`docs` source, confirm its required environment
-   variables (Appendix B) are all set. If any are missing: **stop the
-   loop** before Step 1 and report exactly which variable is missing.
+2. **Task source adapter.** Resolve `<source>` per Appendix C (reads
+   `source=` from `$ARGUMENTS` first; if omitted, checks
+   `.taskloop/config.json`, then whether `docs/planning/` is already
+   established, then scans README/AGENTS.md/CLAUDE.md, asking only if
+   none of those resolve it). Appendix C also validates required env vars
+   for non-`docs` sources and persists the resolution. If a required
+   variable is missing: **stop the loop** before Step 1 and report exactly
+   which variable is missing.
 3. **Blocked memory.** Ensure `.taskloop/blocked-tasks.json`
    exists (create it with `[]` if not), and check `.taskloop/`
    is listed in `.gitignore` (append it if not — see Persistent
