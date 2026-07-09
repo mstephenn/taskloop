@@ -5,7 +5,9 @@
 
 A Claude Code plugin providing `/taskloop`: an unattended
 branch -> implement -> push -> PR -> automated review -> rework -> merge ->
-next-task loop, pluggable across VCS hosts and task trackers.
+next-task loop, pluggable across VCS hosts and task trackers. Also
+provides `/taskloop-plan`, for generating tasks when the backlog is empty
+or doesn't cover what's needed yet.
 
 ## What it does
 
@@ -58,6 +60,10 @@ themselves.
 /taskloop source=linear
 /taskloop skip=ENG-12,ENG-19 source=linear
 /taskloop unblock=0.1.3
+
+/taskloop-plan "add dark mode support"
+/taskloop-plan docs/specs/dark-mode.md
+/taskloop-plan "add dark mode support" source=linear
 ```
 
 ## Requirements
