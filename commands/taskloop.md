@@ -354,10 +354,13 @@ succeed.
 
 ## Appendix B — Task Source Adapters
 
-Every adapter exposes the same four operations used by Steps 1 and 4:
-**list open tasks** (ordered, excludes done), **detect pre-blocked** (is
-this task already marked as blocked by its source, before any
-implementation is attempted), **get task detail**, and **mark done**.
+Every adapter exposes the same five operations: **list open tasks**
+(ordered, excludes done), **detect pre-blocked** (is this task already
+marked as blocked by its source, before any implementation is attempted),
+**get task detail**, and **mark done** are used by `/taskloop`'s Steps 1
+and 4. **Create task(s)** is used by `/taskloop-plan`
+(`commands/taskloop-plan.md`) only — `/taskloop` itself never creates a
+task.
 
 ### `docs` (default)
 
@@ -370,6 +373,7 @@ checkout.
 | Detect pre-blocked | `grep -qi '^\*\*Status:\s*BLOCKED' <task-doc-path>` (or a bare `Status: BLOCKED` line near the top, not inside a code block) — if it matches, `reason` is that line's text with the `**Status:` prefix stripped. |
 | Get task detail | `Read <task-doc-path>` in full — Goal, Context/Why, Implementation Plan, acceptance-criteria checklist. |
 | Mark done | Edit the file: flip each satisfied `- [ ]` to `- [x]` individually, as each criterion is satisfied (not all at once at the end). This is the only place "done" is recorded for this adapter — there is no separate status field. |
+| Create task(s) | Find the highest existing `phase-*/sprint-*` directory under `docs/planning/` (numeric sort, same ordering as "List open tasks" above); if none exists, create `docs/planning/phase-0/sprint-1/`. Write a new `task-<id>-<slug>.md` file per approved task, numbered by appending to the next available task number in that sprint (e.g. if `task-0.1.3-*.md` is the highest existing, the next is `0.1.4`), using the same Goal / Context / Acceptance-Criteria (`- [ ]`) structure this adapter's "Get task detail" row already expects to read back. Never starts a new sprint on its own initiative. |
 
 ### `jira`
 
@@ -384,6 +388,7 @@ Auth: HTTP Basic with `-u "$JIRA_EMAIL:$JIRA_API_TOKEN"`.
 | Detect pre-blocked | From the same list response, check `.fields.status.name` for a case-insensitive match on `"Blocked"`, or `.fields.flagged`/a custom "Impediment" field if the project uses Jira's built-in flag instead of a status — whichever the project actually uses; `reason` is the status name (plus any flag comment if present). |
 | Get task detail | `curl -sS -u "$JIRA_EMAIL:$JIRA_API_TOKEN" "$JIRA_BASE_URL/rest/api/3/issue/<task-id>"` — treat `.fields.description` (Atlassian Document Format) as the goal/acceptance-criteria text; render its `content` blocks to plain text/markdown before reading. |
 | Mark done | Look up the transition ID for "Done" (or the project's terminal status) via `curl -sS -u "$JIRA_EMAIL:$JIRA_API_TOKEN" "$JIRA_BASE_URL/rest/api/3/issue/<task-id>/transitions"`, then `curl -sS -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -X POST "$JIRA_BASE_URL/rest/api/3/issue/<task-id>/transitions" -H "Content-Type: application/json" -d '{"transition":{"id":"<transition-id>"}}'`. One transition per task, at the end of Step 4 — Jira issues have no native per-criterion checkbox to flip incrementally. |
+| Create task(s) | `curl -sS -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -X POST "$JIRA_BASE_URL/rest/api/3/issue" -H "Content-Type: application/json" -d '{"fields":{"project":{"key":"$JIRA_PROJECT_KEY"},"summary":"<title>","description":"<goal/context/acceptance-criteria rendered as Atlassian Document Format>","issuetype":{"name":"Task"}}}'` — one call per approved task; the response's `.key` (e.g. `PROJ-124`) is that task's `<task-id>`. |
 
 ### `asana`
 
@@ -397,6 +402,7 @@ Auth: `Authorization: Bearer $ASANA_ACCESS_TOKEN`.
 | Detect pre-blocked | Re-request the task with `opt_fields=tags.name,memberships.section.name` and check whether any tag name or section name case-insensitively matches `"blocked"` — Asana has no built-in blocked flag, so this depends on the project consistently using a tag or section named that; `reason` is the matching tag/section name. |
 | Get task detail | `curl -sS -H "Authorization: Bearer $ASANA_ACCESS_TOKEN" "https://app.asana.com/api/1.0/tasks/<task-id>?opt_fields=name,notes,subtasks"` — treat `.data.notes` as the goal/acceptance-criteria text; if `.data.subtasks` is non-empty, each subtask is one acceptance criterion — fetch and read each. |
 | Mark done | `curl -sS -H "Authorization: Bearer $ASANA_ACCESS_TOKEN" -X PUT "https://app.asana.com/api/1.0/tasks/<task-id>" -d 'data[completed]=true'`. If the task has subtasks, mark each satisfied subtask complete individually as it's finished (`PUT .../tasks/<subtask-gid>` the same way) before completing the parent at the end of Step 4. |
+| Create task(s) | `curl -sS -H "Authorization: Bearer $ASANA_ACCESS_TOKEN" -X POST "https://app.asana.com/api/1.0/tasks" -d "data[projects][]=$ASANA_PROJECT_GID" -d "data[name]=<title>" -d "data[notes]=<goal/context/acceptance-criteria as plain text>"` — one call per approved task; the response's `.data.gid` is that task's `<task-id>`. |
 
 ### `monday`
 
@@ -415,6 +421,7 @@ Auth: `Authorization: $MONDAY_API_TOKEN` (no `Bearer` prefix).
 | Detect pre-blocked | From the same status column `text` already fetched, check for a case-insensitive match on `"Blocked"` (the board's actual blocked-status label — override with `MONDAY_BLOCKED_LABEL` if the board uses different wording); `reason` is that label text. |
 | Get task detail | Same query shape scoped to one item ID, requesting `name` plus the board's description/long-text column (its column ID is board-specific — resolve once via a `columns { id title }` query and treat whichever column holds free text as the detail field). |
 | Mark done | `curl -sS -H "Authorization: $MONDAY_API_TOKEN" -H "Content-Type: application/json" -X POST https://api.monday.com/v2 -d '{"query":"mutation { change_simple_column_value(board_id: $MONDAY_BOARD_ID, item_id: <task-id>, column_id: \"$MONDAY_STATUS_COLUMN_ID\", value: \"Done\") { id } }"}'` — one mutation per task, at the end of Step 4; Monday status columns have no native per-criterion sub-checklist unless the board uses a checklist column, which is board-specific and out of scope for this default mapping. |
+| Create task(s) | `curl -sS -H "Authorization: $MONDAY_API_TOKEN" -H "Content-Type: application/json" -X POST https://api.monday.com/v2 -d '{"query":"mutation { create_item(board_id: $MONDAY_BOARD_ID, item_name: \"<title>\") { id } }"}'`, then write the goal/context/acceptance-criteria text to whichever column holds free text on this board (the same column "Get task detail" above already resolves) via a follow-up `change_simple_column_value` mutation using the returned item `id` — one pair of calls per approved task; the created item's `id` is that task's `<task-id>`. |
 
 ### `linear`
 
@@ -428,3 +435,4 @@ Auth: `Authorization: $LINEAR_API_KEY` (no `Bearer` prefix).
 | Detect pre-blocked | Re-request the issue with `labels { nodes { name } }` and check for a label case-insensitively matching `"blocked"` (Linear's own "Blocked" relation between issues is a separate concept — a simple label is the more common convention and what this checks by default); `reason` is the label name. |
 | Get task detail | Same query scoped to one issue (`issue(id: "<task-id>") { title description comments { nodes { body } } }`) — treat `description` as the goal/acceptance-criteria text; if the description references a checklist, Linear renders markdown checkboxes inside `description` itself (`- [ ]`) — these can be read the same way as the `docs` adapter's checkboxes for judging what's satisfied, but are not individually flippable via this adapter; only the whole-issue state transition below is written back. |
 | Mark done | `curl -sS -H "Authorization: $LINEAR_API_KEY" -H "Content-Type: application/json" -X POST https://api.linear.app/graphql -d '{"query":"mutation { issueUpdate(id: \"<task-id>\", input: { stateId: \"<done-state-id>\" }) { success } }"}'` — resolve `<done-state-id>` once per run via `query { team(id: \"$LINEAR_TEAM_KEY\") { states { nodes { id name type } } } }`, picking the node with `type: \"completed\"`. One mutation per task, at the end of Step 4. |
+| Create task(s) | Resolve the team's internal id once via `query { team(key: \"$LINEAR_TEAM_KEY\") { id } }`, then `curl -sS -H "Authorization: $LINEAR_API_KEY" -H "Content-Type: application/json" -X POST https://api.linear.app/graphql -d '{"query":"mutation { issueCreate(input: { teamId: \"<resolved-team-id>\", title: \"<title>\", description: \"<goal/context/acceptance-criteria as markdown>\" }) { issue { identifier } } }"}'` — one call per approved task; the response's `.data.issueCreate.issue.identifier` (e.g. `ENG-43`) is that task's `<task-id>`. |
