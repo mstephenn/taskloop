@@ -4,7 +4,7 @@ argument-hint: "[skip=<task-id>,...] [unblock=<task-id>,...] [source=docs|jira|a
 allowed-tools: ["Bash", "Read", "Write", "Edit", "Grep", "Glob", "Skill"]
 ---
 
-# Task Completion Loop
+# Task Loop
 
 Unattended branch -> implement -> push -> PR -> automated review -> rework ->
 merge -> next-task loop. Invoked explicitly only — never auto-triggered —
@@ -56,7 +56,7 @@ mid-implementation to have an unsatisfiable acceptance criterion (Step 4)
 This is what stops the loop from re-attempting (and re-halting on) the
 same known-blocked task on every future run.
 
-- **Location:** `.task-completion-loop/blocked-tasks.json` at the target
+- **Location:** `.taskloop/blocked-tasks.json` at the target
   repo's root.
 - **Format:** a JSON array of objects: `{"task_id": "...", "reason":
   "...", "blocked_at": "<ISO 8601 date>", "source": "<docs|jira|...>"}`.
@@ -65,7 +65,7 @@ same known-blocked task on every future run.
 - **Never committed automatically.** This file is loop-local bookkeeping,
   not project history — the task doc / ticket itself (if the task source
   supports a "blocked" status) is the durable record. In Step 0, if
-  `.task-completion-loop/` is not already listed in the target repo's
+  `.taskloop/` is not already listed in the target repo's
   `.gitignore`, append it there (this one line **may** be committed
   alongside real work later, but do not create a standalone commit just
   for it).
@@ -115,8 +115,8 @@ re-detect per task.
    `docs`). For a non-`docs` source, confirm its required environment
    variables (Appendix B) are all set. If any are missing: **stop the
    loop** before Step 1 and report exactly which variable is missing.
-3. **Blocked memory.** Ensure `.task-completion-loop/blocked-tasks.json`
-   exists (create it with `[]` if not), and check `.task-completion-loop/`
+3. **Blocked memory.** Ensure `.taskloop/blocked-tasks.json`
+   exists (create it with `[]` if not), and check `.taskloop/`
    is listed in `.gitignore` (append it if not — see Persistent
    Blocked-Task Memory above). Load the file's contents. Read `unblock=`
    from `$ARGUMENTS`; for each ID listed there, remove the matching entry
@@ -141,7 +141,7 @@ priority order, already excluding anything already done.
 2. Take the first remaining task. Run the adapter's **detect pre-blocked**
    check (Appendix B) against it *before* fetching full detail or
    branching:
-   - If it's pre-blocked: append it to `.task-completion-loop/blocked-tasks.json`
+   - If it's pre-blocked: append it to `.taskloop/blocked-tasks.json`
      (per the format in Persistent Blocked-Task Memory) with the detected
      reason, tell the user this task was found pre-blocked and recorded
      (not silently — one line in the run's output is enough), remove it
@@ -196,7 +196,7 @@ task's acceptance criteria actually require.
    - Abandon this task's branch: `git checkout <default-branch>` then
      `git branch -D task/<task-id>-<task-slug>` (any partial work on it is
      discarded — nothing was pushed yet at this point in the flow).
-   - Append the task to `.task-completion-loop/blocked-tasks.json` (per
+   - Append the task to `.taskloop/blocked-tasks.json` (per
      the format in Persistent Blocked-Task Memory) with the specific
      unsatisfiable criterion as `reason`.
    - Report the task and the reason to the user — this is not silent, just

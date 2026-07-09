@@ -1,9 +1,9 @@
-# task-completion-loop
+# taskloop
 
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-5A32FB)](https://github.com/mstephenn/task-completion-loop)
-[![automation](https://img.shields.io/badge/automation-ci--cd-blue)](https://github.com/mstephenn/task-completion-loop)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-5A32FB)](https://github.com/mstephenn/taskloop)
+[![automation](https://img.shields.io/badge/automation-ci--cd-blue)](https://github.com/mstephenn/taskloop)
 
-A Claude Code plugin providing `/task-completion-loop`: an unattended
+A Claude Code plugin providing `/taskloop`: an unattended
 branch -> implement -> push -> PR -> automated review -> rework -> merge ->
 next-task loop, pluggable across VCS hosts and task trackers.
 
@@ -32,12 +32,12 @@ with a `Status: BLOCKED` header, a Jira issue in a "Blocked" status, a
 labeled Asana/Linear/Monday item) — or one discovered mid-implementation
 to need something outside the loop's control (human sign-off, an
 unresolved external precondition) — is never implemented or marked done.
-It's recorded to a local `.task-completion-loop/blocked-tasks.json` file
+It's recorded to a local `.taskloop/blocked-tasks.json` file
 and the loop moves straight to the next task, instead of halting and
 making you re-pass `skip=` for it on every future run. Bring one back into
 scope deliberately with `unblock=<task-id>`.
 
-See `commands/task-completion-loop.md` for the exact step-by-step contract
+See `commands/taskloop.md` for the exact step-by-step contract
 the command follows — the numbered steps are the fixed control flow;
 Appendix A (VCS adapters) and Appendix B (task-source adapters) hold the
 per-provider command sets so switching providers never changes the steps
@@ -46,18 +46,18 @@ themselves.
 ## Install
 
 ```
-/plugin marketplace add mstephenn/task-completion-loop
-/plugin install task-completion-loop@task-completion-loop-marketplace
+/plugin marketplace add mstephenn/taskloop
+/plugin install taskloop@taskloop-marketplace
 ```
 
 ## Usage
 
 ```
-/task-completion-loop
-/task-completion-loop skip=0.1.3
-/task-completion-loop source=linear
-/task-completion-loop skip=ENG-12,ENG-19 source=linear
-/task-completion-loop unblock=0.1.3
+/taskloop
+/taskloop skip=0.1.3
+/taskloop source=linear
+/taskloop skip=ENG-12,ENG-19 source=linear
+/taskloop unblock=0.1.3
 ```
 
 ## Requirements
