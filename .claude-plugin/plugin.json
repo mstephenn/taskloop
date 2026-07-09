@@ -1,7 +1,7 @@
 {
   "name": "task-completion-loop",
-  "description": "Unattended branch -> implement -> push -> PR -> automated review -> rework -> merge -> next-task loop, gated by /code-review. VCS: GitHub, Azure DevOps, or GitLab (CLI or API), auto-detected from the repo's remote. Task source: docs/planning/, Jira, Asana, Monday.com, or Linear.",
-  "version": "0.3.0",
+  "description": "Unattended branch -> implement -> push -> PR -> automated review -> rework -> merge -> next-task loop, gated by /code-review. VCS: GitHub, Azure DevOps, or GitLab (CLI or API), auto-detected from the repo's remote. Task source: docs/planning/, Jira, Asana, Monday.com, or Linear. Blocked tasks are remembered locally and auto-skipped until unblocked.",
+  "version": "0.4.0",
   "author": {
     "name": "Stephen M",
     "email": "stephrajm@gmail.com"

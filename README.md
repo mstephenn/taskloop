@@ -21,9 +21,18 @@ next-task loop, pluggable across VCS hosts and task trackers.
 4. Runs `/code-review` against the diff as the actual quality gate (no
    human reviewer is assigned). Reworks up to 3 rounds on findings.
 5. Merges the PR/MR and repeats, until every task is done or the loop hits
-   a stop condition (stuck task, merge failure, an unresolvable VCS/task
-   adapter, or an acceptance criterion that requires something outside the
-   loop's control — e.g. human sign-off, an external team dependency).
+   a stop condition (stuck task, merge failure, or an unresolvable
+   VCS/task adapter).
+
+A task that's already marked blocked by its source (e.g. a `docs` task doc
+with a `Status: BLOCKED` header, a Jira issue in a "Blocked" status, a
+labeled Asana/Linear/Monday item) — or one discovered mid-implementation
+to need something outside the loop's control (human sign-off, an
+unresolved external precondition) — is never implemented or marked done.
+It's recorded to a local `.task-completion-loop/blocked-tasks.json` file
+and the loop moves straight to the next task, instead of halting and
+making you re-pass `skip=` for it on every future run. Bring one back into
+scope deliberately with `unblock=<task-id>`.
 
 See `commands/task-completion-loop.md` for the exact step-by-step contract
 the command follows — the numbered steps are the fixed control flow;
@@ -45,6 +54,7 @@ themselves.
 /task-completion-loop skip=0.1.3
 /task-completion-loop source=linear
 /task-completion-loop skip=ENG-12,ENG-19 source=linear
+/task-completion-loop unblock=0.1.3
 ```
 
 ## Requirements
@@ -84,6 +94,9 @@ another installed plugin provides it).
 - Never prints, logs, or embeds an API token in a commit message, PR/MR
   body, or branch name.
 - Rework is capped at 3 rounds per task; exceeding it halts the whole loop,
-  not just that task.
-- Acceptance criteria requiring human/external action are a hard stop for
-  that task — the loop never marks a task done it can't actually verify.
+  not just that task. This is deliberately kept a full halt (never
+  auto-skipped) — a task failing review repeatedly is a loop/process
+  problem worth surfacing, not an external precondition to remember past.
+- A task that's blocked (pre-marked or discovered mid-implementation) is
+  never marked done and never implemented — recorded to blocked memory and
+  skipped instead, automatically, on every run until explicitly unblocked.
