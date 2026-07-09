@@ -95,7 +95,13 @@ Print the remaining candidates (after Step 5's dedup) as:
 <task-id>  <title>  — <one-line goal>
 ```
 
-one row per candidate, followed by a line listing anything dropped as
+one row per candidate. For the `docs` adapter, `<task-id>` is the real id
+this command will assign, computed from Step 7/8's placement rules
+(Appendix B's `docs` row), so it can be shown now. For `jira`/`asana`/
+`monday`/`linear`, no id exists yet at this point — no ticket has been
+created, and the tracker assigns the id only when Step 8 actually creates
+it — so show the literal placeholder `(new)` in that column instead of a
+task-id. Follow the rows with a line listing anything dropped as
 "already covered" in Step 5. Ask the user to confirm:
 
 - **Accept as-is** — proceed to Step 7.
@@ -146,7 +152,8 @@ tasks already created — they're valid on their own.
 Report:
 - every task created, with its final `<task-id>` (ticket trackers assign
   their own id; for `docs`, the id is the one this command assigned per
-  the placement rules in Appendix B's `docs` row)
+  the placement rules in Appendix B's `docs` row) — this is where the
+  real ids for any `(new)` placeholder rows shown in Step 6 first appear
 - everything skipped as "already covered" in Step 5, with the existing
   task id it matched
 - for a first-time `docs` run only: whether the new docs were committed
