@@ -268,7 +268,9 @@ the Stop Conditions below is hit.
   summary of every task processed this run, every task skipped via
   `skip=`, and every task newly recorded to blocked memory this run (with
   its reason) — including a reminder that `unblock=<task-id>` is how to
-  bring one back into scope on a future run.
+  bring one back into scope on a future run. If the backlog is now empty
+  (not just this run's candidates exhausted), mention `/taskloop-plan` as
+  the way to add more tasks.
 - **Unresolvable adapter:** Step 0 can't match the VCS remote to a
   supported provider, the matching CLI/API credential is unavailable, or a
   required task-source environment variable is missing. Halt before Step 1
