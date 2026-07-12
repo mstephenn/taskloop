@@ -1,6 +1,6 @@
 {
   "name": "taskloop",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Unattended task completion loop with VCS and task-source adapters, plus backlog task planning.",
   "author": {
     "name": "Stephen M",

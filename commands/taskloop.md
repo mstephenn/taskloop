@@ -191,7 +191,15 @@ task's acceptance criteria actually require.
 1. Read the task detail fetched in Step 1 in full — goal, context/why, any
    implementation plan, and every acceptance criterion.
 2. Implement the task: write the code and tests needed to satisfy every
-   acceptance criterion.
+   acceptance criterion. Place new files under the target repo's existing
+   directory structure — mirror where similar/related files already live
+   (e.g. a new module beside its siblings, a new test beside its existing
+   test suite). Do not add new flat files at the repo root; the only
+   root-level files a task should ever add or touch are ones that
+   conventionally live there (`README.md`, `.gitignore`, top-level config
+   like `package.json`/`tsconfig.json`). If a task's acceptance criteria
+   don't imply a location and no existing convention covers it, create a
+   reasonably-named subdirectory rather than dropping the file at root.
 3. Record completion via the task source adapter's **mark done** operation
    (Appendix B). For the `docs` adapter this means flipping each satisfied
    `- [ ]` to `- [x]` individually as you go; for ticket-tracker adapters
