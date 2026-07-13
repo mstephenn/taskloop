@@ -60,13 +60,43 @@ Otherwise, run `test -f "<remaining-argument>"`:
 - If not: treat the remaining argument text itself as the goal
   description to decompose.
 
-## Step 3 — Load the Existing Backlog
+## Step 3 — Ask Clarifying Questions
+
+This step always runs, whether the input from Step 2 is a one-line goal
+or a fully written spec file — a detailed-looking input can still hide
+ambiguity that would otherwise surface as a wrong or incomplete task
+list. Never skip straight from Step 2 to Step 4 (Load the Existing
+Backlog).
+
+1. Read the Step 2 input and draft a candidate list of clarifying
+   questions covering, at minimum: scope boundary (what's explicitly in
+   vs. out), constraints or non-goals, priority/ordering across the work,
+   and definition of done / acceptance criteria. Add more candidates if
+   the input leaves anything else ambiguous (e.g. target users, affected
+   surfaces, rollout expectations).
+2. Drop any candidate the input already answers unambiguously — quote or
+   paraphrase the answer already given so it's clear why that question
+   was dropped.
+3. Cap the remaining list at 5 questions. If more than 5 remain
+   genuinely open, keep the 5 most decomposition-blocking ones (the ones
+   most likely to change which tasks get created or what their
+   acceptance criteria say) and drop the rest — do not ask more than 5.
+4. If zero questions remain after step 2 (the input already answers all
+   of them), state which questions were considered and why each is
+   already answered, and proceed straight to Step 4 without waiting for
+   a reply.
+5. Otherwise, ask the user all remaining questions together in one
+   message. Wait for their reply before proceeding to Step 4. Use their
+   answers to inform decomposition in Step 5 — do not re-ask anything
+   already covered by an answer here.
+
+## Step 4 — Load the Existing Backlog
 
 Call the selected adapter's existing **list open tasks** operation
 (`commands/taskloop.md` Appendix B) — read-only, no new adapter code
-needed. Keep the result for the dedup check in Step 5.
+needed. Keep the result for the dedup check in Step 6.
 
-## Step 4 — Decompose the Input into Tasks
+## Step 5 — Decompose the Input into Tasks
 
 Walk the input structurally so nothing is silently dropped:
 
@@ -78,6 +108,9 @@ Walk the input structurally so nothing is silently dropped:
   required to deliver the stated goal (e.g. "add dark mode support" ->
   theme/state, styling, persistence, UI control).
 
+Incorporate any answers gathered in Step 3 — they may narrow scope, add
+constraints, or change acceptance criteria for individual candidates.
+
 For each candidate task, produce:
 - a short title
 - a one-line goal
@@ -86,50 +119,50 @@ For each candidate task, produce:
   exactly what "done" means for that task — this is what `/taskloop`'s
   own Step 4 will later read and satisfy.
 
-## Step 5 — Cross-Check Against the Existing Backlog
+## Step 6 — Cross-Check Against the Existing Backlog
 
-Using the list loaded in Step 3: for each candidate task from Step 4, if
+Using the list loaded in Step 4: for each candidate task from Step 5, if
 an existing open task's title/goal already substantially covers it, drop
 that candidate. Note it (with the existing task's id) as "already
 covered" for the final report — do not create a duplicate for it.
 
-## Step 6 — Present the Proposed List and Confirm
+## Step 7 — Present the Proposed List and Confirm
 
-Print the remaining candidates (after Step 5's dedup) as:
+Print the remaining candidates (after Step 6's dedup) as:
 
 ```
 <task-id>  <title>  — <one-line goal>
 ```
 
 one row per candidate. For the `docs` adapter, `<task-id>` is the real id
-this command will assign, computed from Step 8's placement rules
+this command will assign, computed from Step 9's placement rules
 (Appendix B's `docs` row), so it can be shown now. For `jira`/`asana`/
 `monday`/`linear`, no id exists yet at this point — no ticket has been
-created, and the tracker assigns the id only when Step 8 actually creates
+created, and the tracker assigns the id only when Step 9 actually creates
 it — so show the literal placeholder `(new)` in that column instead of a
 task-id. Follow the rows with a line listing anything dropped as
-"already covered" in Step 5. Ask the user to confirm:
+"already covered" in Step 6. Ask the user to confirm:
 
-- **Accept as-is** — proceed to Step 7.
+- **Accept as-is** — proceed to Step 8.
 - **Reject** — stop here. Nothing is created, no partial writes.
 - **Edits** (e.g. drop a row, reword a title) — apply them to the list,
   then re-present the updated list and ask again.
 
 Do not proceed past this step without an explicit accept.
 
-## Step 7 — `docs` Adapter Only: Ask About Git Tracking
+## Step 8 — `docs` Adapter Only: Ask About Git Tracking
 
 Skip this step entirely for `jira`/`asana`/`monday`/`linear` — go straight
-to Step 8.
+to Step 9.
 
 For `docs`, before writing any file:
 
 1. Check `git ls-files docs/planning/ | head -1` — if it prints a path,
-   `docs/planning/` is already tracked; skip to Step 8 and write files
+   `docs/planning/` is already tracked; skip to Step 9 and write files
    normally (tracked).
 2. Otherwise check whether `.gitignore` already has an entry matching
    `docs/planning/` (a `docs/planning/`, `docs/planning`, or broader
-   `docs/` line). If so, skip to Step 8 and write files as already
+   `docs/` line). If so, skip to Step 9 and write files as already
    covered by that ignore rule.
 3. If neither is true — this is the first time this repo would get a
    `docs/planning/` tree — **ask the user**: "This repo doesn't have
@@ -137,30 +170,30 @@ For `docs`, before writing any file:
    or added to `.gitignore` as local-only planning notes?" Do not infer
    the answer from any other `docs/` subdirectory's tracked/ignored
    status. Wait for their answer:
-   - **Committed:** proceed to Step 8, do not touch `.gitignore`.
+   - **Committed:** proceed to Step 9, do not touch `.gitignore`.
    - **Gitignored:** append a `docs/planning/` line to `.gitignore`
      (create `.gitignore` if it doesn't exist) before proceeding to
-     Step 8.
+     Step 9.
 
-## Step 8 — Create the Tasks
+## Step 9 — Create the Tasks
 
 Call the selected adapter's **create task(s)** operation
 (`commands/taskloop.md` Appendix B) once per approved candidate, in the
-order presented in Step 6, respecting Step 7's answer for the `docs`
+order presented in Step 7, respecting Step 8's answer for the `docs`
 adapter. If a single creation call fails (ticket-tracker adapters only):
-stop immediately, and in the report (Step 9) list exactly which tasks
+stop immediately, and in the report (Step 10) list exactly which tasks
 were already created successfully before the failure and which one
 failed. Do not continue past a failed creation, and do not roll back
 tasks already created — they're valid on their own.
 
-## Step 9 — Report
+## Step 10 — Report
 
 Report:
 - every task created, with its final `<task-id>` (ticket trackers assign
   their own id; for `docs`, the id is the one this command assigned per
   the placement rules in Appendix B's `docs` row) — this is where the
-  real ids for any `(new)` placeholder rows shown in Step 6 first appear
-- everything skipped as "already covered" in Step 5, with the existing
+  real ids for any `(new)` placeholder rows shown in Step 7 first appear
+- everything skipped as "already covered" in Step 6, with the existing
   task id it matched
 - for a first-time `docs` run only: whether the new docs were committed
-  or gitignored per Step 7
+  or gitignored per Step 8

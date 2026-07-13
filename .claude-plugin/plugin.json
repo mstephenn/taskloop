@@ -1,7 +1,7 @@
 {
   "name": "taskloop",
   "description": "Unattended branch -> implement -> push -> PR -> automated review -> rework -> merge -> next-task loop, gated by /code-review, plus /taskloop-plan to generate tasks for an empty or thin backlog. VCS: GitHub, Azure DevOps, or GitLab (CLI or API), auto-detected from the repo's remote. Task source: docs/planning/, Jira, Asana, Monday.com, or Linear. Blocked tasks are remembered locally and auto-skipped until unblocked.",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "author": {
     "name": "Stephen M",
     "email": "stephrajm@gmail.com"
